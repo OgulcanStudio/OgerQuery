@@ -1,0 +1,83 @@
+{
+  "name": "ogerquery",
+  "version": "0.1.0",
+  "description": "Ultra-fast lazy sync/async query engine for TypeScript — 42× faster than native Array chains on 1M rows. Zero runtime dependencies.",
+  "type": "module",
+  "sideEffects": [
+    "src/features/registry.ts",
+    "src/index.ts"
+  ],
+  "main": "./dist/OgerQuery.cjs",
+  "module": "./dist/OgerQuery.esm.js",
+  "types": "./dist/OgerQuery.d.ts",
+  "unpkg": "./dist/OgerQuery.min.js",
+  "jsdelivr": "./dist/OgerQuery.min.js",
+  "browser": "./dist/OgerQuery.min.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/OgerQuery.d.ts",
+        "default": "./dist/OgerQuery.esm.js"
+      },
+      "require": {
+        "types": "./dist/OgerQuery.d.cts",
+        "default": "./dist/OgerQuery.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "benchmark": "npm run build && node scripts/benchmark.mjs",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "query",
+    "linq",
+    "iterable",
+    "lazy",
+    "typescript",
+    "async",
+    "performance",
+    "pipeline",
+    "data-processing",
+    "zero-dependencies",
+    "ogulcanstudio"
+  ],
+  "author": "Ogulcan Studio",
+  "license": "MIT",
+  "homepage": "https://ogulcan.studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OgulcanStudio/OgerQuery.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OgulcanStudio/OgerQuery/issues",
+    "email": "npm@ogulcan.studio"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "@vitest/coverage-v8": "^4.1.8",
+    "fast-check": "^4.1.1",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
