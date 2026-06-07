@@ -1,6 +1,6 @@
 import type { FeaturePlugin } from '../../core/FeaturePlugin.js';
 import type { OpPipeline } from '../../core/OpPipeline.js';
-import { executePipeline } from '../../core/executor.js';
+import { executePipeline, executePipelineToAll } from '../../core/executor.js';
 import { executeAsyncPipeline } from '../../core/asyncExecutor.js';
 import {
   EmptySequenceError,
@@ -23,12 +23,7 @@ export const allFeature: FeaturePlugin = {
   name: 'All',
   category: 'terminal',
   runSync(source, pipeline, predicate: Predicate<any>) {
-    let index = 0;
-    for (const item of iterate(source, pipeline)) {
-      if (!predicate(item, index)) return false;
-      index++;
-    }
-    return true;
+    return executePipelineToAll(source, pipeline.ops, predicate);
   },
   async runAsync(source, pipeline, predicate: Predicate<any>) {
     let index = 0;

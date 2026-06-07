@@ -1,7 +1,7 @@
 {
   "name": "ogerquery",
-  "version": "0.1.0",
-  "description": "Ultra-fast lazy sync/async query engine for TypeScript — 42× faster than native Array chains on 1M rows. Zero runtime dependencies.",
+  "version": "0.2.0",
+  "description": "Ultra-fast lazy sync/async query engine for TypeScript — 73× faster than native Array chains on 1M rows. Zero runtime dependencies.",
   "type": "module",
   "sideEffects": [
     "src/features/registry.ts",
@@ -37,7 +37,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "benchmark": "npm run build && node scripts/benchmark.mjs",
+    "benchmark": "bun scripts/benchmark_bun.ts",
     "prepack": "npm run build"
   },
   "keywords": [
@@ -69,9 +69,12 @@
     "access": "public"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.24",
     "@types/node": "^22.15.29",
     "@vitest/coverage-v8": "^4.1.8",
+    "es-toolkit": "^1.47.0",
     "fast-check": "^4.1.1",
+    "lodash": "^4.18.1",
     "tsup": "^8.5.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",

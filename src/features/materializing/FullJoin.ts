@@ -38,13 +38,19 @@ export const fullJoinFeature: FeaturePlugin = {
       for (const outerItem of source) {
         const key = op.outerKeySelector(outerItem, outerIndex);
         const matches = lookup.get(key);
-        if (matches === undefined || matches.length === 0) {
+        if (matches === undefined) {
           yield op.resultSelector(outerItem, null);
         } else {
-          for (let i = 0; i < matches.length; i++) {
-            const innerItem = matches[i];
-            matchedInner.add(innerItem);
-            yield op.resultSelector(outerItem, innerItem);
+          if (Array.isArray(matches)) {
+            const mLen = matches.length;
+            for (let i = 0; i < mLen; i++) {
+              const innerItem = matches[i];
+              matchedInner.add(innerItem);
+              yield op.resultSelector(outerItem, innerItem);
+            }
+          } else {
+            matchedInner.add(matches);
+            yield op.resultSelector(outerItem, matches);
           }
         }
         outerIndex++;

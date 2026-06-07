@@ -73,8 +73,14 @@ describe('1M+ scale correctness', () => {
   });
 
   it('OrderBy + First on 1M rows', () => {
-    const data = makeTransactions(100_000);
+    const data = makeTransactions(MILLION);
     const first = Q(data).OrderBy((t) => t.amount).First();
     expect(first.amount).toBe(0.01);
+  });
+
+  it('OrderBy + Last on 1M rows', () => {
+    const data = makeTransactions(MILLION);
+    const last = Q(data).OrderBy((t) => t.amount).Last();
+    expect(last.amount).toBe(999.01);
   });
 }, 60_000);

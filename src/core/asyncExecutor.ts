@@ -1,6 +1,6 @@
 import { isArray } from '../utils/isArray.js';
 import { resolveMaterializingOpSecond } from '../utils/resolveMaterializingOp.js';
-import { executePipeline, materialize, wrapLazy } from './executor.js';
+import { executePipeline, materialize, wrapLazy, executeOrderByTake } from './executor.js';
 import type { OpPipeline } from './OpPipeline.js';
 import { canUseArrayFastPath, isMaterializingOpAt, type PipelineOp } from './pipelineOps.js';
 
@@ -57,9 +57,17 @@ export async function* executeAsyncPipeline<T>(
     }
     if (i < ops.length) {
       const op = await resolveMaterializingOpSecond(ops[i]!);
-      const materialized = materialize(await collectToArray(current, signal), op);
-      current = asyncFromIterable(materialized);
-      i++;
+      if (op.kind === 'orderBy' && i + 1 < ops.length && ops[i + 1]!.kind === 'take') {
+        const takeOp = ops[i + 1] as { kind: 'take'; count: number };
+        const collected = await collectToArray(current, signal);
+        const optimized = executeOrderByTake(collected, op, takeOp.count);
+        current = asyncFromIterable(optimized);
+        i += 2;
+      } else {
+        const materialized = materialize(await collectToArray(current, signal), op);
+        current = asyncFromIterable(materialized);
+        i++;
+      }
     }
   }
   yield* collectAsync(current, signal);

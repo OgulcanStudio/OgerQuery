@@ -39,25 +39,62 @@ export function compareOrderKeys(
   if (entry.localeCompare && typeof ka === 'string' && typeof kb === 'string') {
     const locale = typeof entry.localeCompare === 'string' ? entry.localeCompare : undefined;
     cmp = ka.localeCompare(kb, locale);
+  } else if (entry.comparer) {
+    cmp = entry.comparer(ka, kb);
   } else {
-    const cmpFn = entry.comparer ?? (defaultComparer as (x: unknown, y: unknown) => number);
-    cmp = compareWith(ka, kb, cmpFn);
+    if (ka === kb) {
+      cmp = 0;
+    } else {
+      const ta = typeof ka;
+      const tb = typeof kb;
+      if (ta === tb && (ta === 'string' || ta === 'number' || ta === 'bigint')) {
+        cmp = (ka as any) < (kb as any) ? -1 : 1;
+      } else {
+        cmp = defaultComparer(ka, kb);
+      }
+    }
   }
   return entry.descending ? -cmp : cmp;
 }
 
 export function stableSortInPlace<T>(arr: T[], keys: OrderKeyEntry<T>[]): void {
-  const indexed = arr.map((value, index) => ({ value, index }));
-  indexed.sort((a, b) => {
-    for (const entry of keys) {
-      const ka = entry.key(a.value, a.index);
-      const kb = entry.key(b.value, b.index);
-      const cmp = compareOrderKeys(ka, kb, entry);
+  const len = arr.length;
+  if (len <= 1) return;
+
+  const numKeys = keys.length;
+  const keysArrays = new Array(numKeys);
+  for (let k = 0; k < numKeys; k++) {
+    const entry = keys[k]!;
+    const keyArr = new Array(len);
+    const keyFn = entry.key;
+    for (let i = 0; i < len; i++) {
+      keyArr[i] = keyFn(arr[i]!, i);
+    }
+    keysArrays[k] = keyArr;
+  }
+
+  const indices = len > 1000 ? new Int32Array(len) : new Array(len);
+  for (let i = 0; i < len; i++) {
+    indices[i] = i;
+  }
+
+  indices.sort((i, j) => {
+    for (let k = 0; k < numKeys; k++) {
+      const keyArr = keysArrays[k]!;
+      const ka = keyArr[i];
+      const kb = keyArr[j];
+      const cmp = compareOrderKeys(ka, kb, keys[k]!);
       if (cmp !== 0) return cmp;
     }
-    return a.index - b.index;
+    return i - j;
   });
-  for (let i = 0; i < arr.length; i++) {
-    arr[i] = indexed[i]!.value;
+
+  const sorted = new Array(len);
+  for (let i = 0; i < len; i++) {
+    sorted[i] = arr[indices[i]!]!;
+  }
+  for (let i = 0; i < len; i++) {
+    arr[i] = sorted[i]!;
   }
 }
+
