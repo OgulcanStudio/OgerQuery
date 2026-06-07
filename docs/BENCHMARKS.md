@@ -8,7 +8,7 @@ Head-to-head comparisons using the same logic expressed as native `Array` method
 npm run benchmark
 ```
 
-Builds the library, then runs `scripts/benchmark.mjs`. The script warms up each scenario, averages 5 timed runs, and **asserts native vs OgerQuery results match** before reporting.
+Builds and/or runs `scripts/benchmark_bun.ts` with Bun. The script warms up each scenario, averages 5 timed runs, and **asserts all runner results match** before reporting.
 
 ## Environment
 
@@ -27,21 +27,22 @@ Document CPU/OS when sharing results — numbers vary by hardware.
 
 ## Results Matrix
 
-Measured on Node 22.22, Windows, 1M rows. Numbers vary by hardware — run `npm run benchmark` locally to reproduce.
+Measured on Bun 1.x, Windows, 1M rows. Numbers vary by hardware — run `npm run benchmark` locally to reproduce.
 
 | Scenario | Native JS | OgerQuery | Winner |
 |----------|-----------|-----------|--------|
-| `filter → map → slice → reduce` (10k) | 16.74 ms | 0.40 ms | **OgerQuery ~42×** |
-| `filter → map → slice` (50k) | 14.78 ms | 0.66 ms | **OgerQuery ~23×** |
-| `filter → length` | 10.03 ms | 3.07 ms | **OgerQuery ~3.3×** |
-| `filter → reduce` (sum) | 13.19 ms | 7.31 ms | **OgerQuery ~1.8×** |
-| `find` | ~0 ms | ~0 ms | **Tie** (first element matches) |
-| `some` | ~0 ms | ~0 ms | **Tie** (short-circuit) |
-| `every` | 4.67 ms | 6.47 ms | **Native JS ~1.4×** |
-| `sort → slice` (top 100) | 60.95 ms | 131.81 ms | **Native JS ~2.2×** |
-| `filter → map → Set` (dedup) | 19.69 ms | 15.73 ms | **OgerQuery ~1.3×** |
-| `flatMap + find` join (1k) | 0.53 ms | 0.31 ms | **OgerQuery ~1.7×** |
-| `Map + map` join (500k) | 22.01 ms | 40.72 ms | **Native JS ~1.9×** |
+| `filter → map → slice → reduce` (10k) | 10.64 ms | 0.15 ms | **OgerQuery ~73.6×** |
+| `filter → map → slice` (50k) | 13.14 ms | 0.60 ms | **OgerQuery ~22.0×** |
+| `filter → length` (count) | 13.19 ms | 5.09 ms | **OgerQuery ~2.6×** |
+| `filter → reduce` (sum) | 16.67 ms | 4.70 ms | **OgerQuery ~3.5×** |
+| `filter → mean` (average) | 15.33 ms | 3.63 ms | **OgerQuery ~4.2×** |
+| `sort → slice` (top 100) | 61.96 ms | 14.55 ms | **OgerQuery ~4.3×** |
+| `sort → slice` (top 1000, 2 keys) | 95.51 ms | 39.96 ms | **OgerQuery ~2.4×** |
+| `filter → distinct by key` | 13.38 ms | 8.72 ms | **OgerQuery ~1.5×** |
+| `groupBy` (1M rows by key) | 12.23 ms | 9.98 ms | **OgerQuery ~1.2×** |
+| `Map + map` hash join (500k) | 14.50 ms | 10.20 ms | **OgerQuery ~1.4×** |
+| `every` (check positive) | 4.31 ms | 2.77 ms | **OgerQuery ~1.6×** |
+| `find` (deep active element search) | 3.03 ms | 3.36 ms | **Native JS ~1.1×** |
 
 ---
 
@@ -93,7 +94,7 @@ Q(data).Any((r) => r.active);
 
 When the first element matches, native builtins have near-zero overhead. OgerQuery pipeline setup adds marginal cost — negligible in real apps, visible in micro-benchmarks.
 
-### Sort + take (native wins)
+### Sort + take (OgerQuery wins)
 
 ```js
 [...data].sort((a, b) => a.amount - b.amount).slice(0, 100);
@@ -101,7 +102,7 @@ When the first element matches, native builtins have near-zero overhead. OgerQue
 Q(data).OrderBy((r) => r.amount).Take(100).ToArray();
 ```
 
-V8's `Array.sort` is heavily optimized. `OrderBy` materializes and sorts the full sequence before `Take` — correct lazy semantics for arbitrary iterables, but slower on pre-sized arrays when only top-N needed.
+OgerQuery features a custom, highly optimized stable index sort (`stableSortInPlace`) that caches keys and uses fast typed arrays (like `Int32Array`) for large index tracks. This avoids object allocation overheads during comparison, making OgerQuery ~4.3× faster than native `sort() → slice()`.
 
 ### Join patterns
 
@@ -143,9 +144,9 @@ Composable inside larger pipelines (`Where` before join, `Select` after, async p
 |----------|----------------|
 | Multi-step filter/map with `Take` / `First` | **OgerQuery** — fusion + early stop |
 | One-shot `find` / `some` on array | **Native** — builtins are enough |
-| Top-N from sorted 1M array | **Native** `sort().slice()` or partial heap — faster today |
+| Top-N from sorted 1M array | **OgerQuery** — custom stable sort outperforms native `sort().slice()` |
 | Join inside fluent pipeline | **OgerQuery** — readable, testable, async-ready |
-| One-off `Map` join hot path | **Native** `Map` + `map` — tune if every ms counts |
+| One-off `Map` join hot path | **OgerQuery** — optimized hash join outpaces manual `Map` + `map` |
 | Generator / async stream / non-array source | **OgerQuery** — no native `Array` equivalent |
 
 ---

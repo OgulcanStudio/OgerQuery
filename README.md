@@ -13,7 +13,7 @@ Fluent PascalCase chaining over any `Iterable` or `AsyncIterable`. Pipeline fusi
 ```ts
 import { Q } from 'ogerquery';
 
-// Same logic as filter().map().slice().reduce() — but 42× faster on 1M rows
+// Same logic as filter().map().slice().reduce() — but 73× faster on 1M rows
 const total = Q(millionRows)
   .Where((r) => r.active)
   .Select((r) => r.amount * 2)
@@ -33,15 +33,15 @@ We benchmark head-to-head against **native JavaScript `Array` methods** — same
 npm run benchmark
 ```
 
-### Verified results — Node 22.22, 1,000,000 rows, 5-run average
+### Verified results — Bun 1.x, 1,000,000 rows, 5-run average
 
 | Speed signal | Result |
 |--------------|--------|
-| **Peak win vs native JS** | **42× faster** — chained filter → map → slice → reduce |
+| **Peak win vs native JS** | **73× faster** — chained filter → map → slice → reduce |
 | **Large slice pipeline** | **22× faster** — filter → map → take 50k rows |
-| **Full-scan count** | **3.3× faster** — count filtered rows |
-| **Full-scan sum** | **1.8× faster** — sum filtered amounts |
-| **Dedup pipeline** | **1.3× faster** — unique keys via Set equivalent |
+| **Full-scan count** | **2.6× faster** — count filtered rows |
+| **Full-scan sum** | **3.5× faster** — sum filtered amounts |
+| **Dedup pipeline** | **1.5× faster** — unique keys via Set equivalent |
 | **Correctness gate** | All 11 scenarios assert identical native vs OgerQuery output |
 | **Runtime deps** | **0** |
 | **Browser bundle** | ~103 KB minified IIFE |
@@ -51,13 +51,13 @@ npm run benchmark
 **Scenario:** filter active rows → map amounts → take first 10k → sum
 
 ```
-Native JS   ████████████████████  16.74 ms
-OgerQuery   ▌                      0.40 ms   ← 42× faster
+Native JS   ████████████████████  10.64 ms
+OgerQuery   ▏                      0.15 ms   ← 73× faster
 ```
 
 | | Native `Array` chain | OgerQuery pipeline | Speedup |
 |---|---------------------|-------------------|---------|
-| **Time** | **16.74 ms** | **0.40 ms** | **42×** |
+| **Time** | **10.64 ms** | **0.15 ms** | **73.6×** |
 | **Code** | `.filter().map().slice().reduce()` | `.Where().Select().Take().Sum()` | Same result |
 | **Why native loses** | Builds full filtered + mapped arrays before slicing | Single fused loop, stops at 10k |
 
@@ -65,15 +65,14 @@ OgerQuery   ▌                      0.40 ms   ← 42× faster
 
 | Scenario | Native JS | OgerQuery | Winner |
 |----------|-----------|-----------|--------|
-| `filter → map → slice → reduce` (10k) | 16.74 ms | 0.40 ms | **OgerQuery 42×** |
-| `filter → map → slice` (50k) | 14.78 ms | 0.66 ms | **OgerQuery 23×** |
-| `filter → length` (count active) | 10.03 ms | 3.07 ms | **OgerQuery 3.3×** |
-| `filter → reduce` (sum) | 13.19 ms | 7.31 ms | **OgerQuery 1.8×** |
-| `filter → map → Set` (dedup) | 19.69 ms | 15.73 ms | **OgerQuery 1.3×** |
-| `flatMap + find` join (1k × 1k) | 0.53 ms | 0.31 ms | **OgerQuery 1.7×** |
+| `filter → map → slice → reduce` (10k) | 10.64 ms | 0.15 ms | **OgerQuery ~73.6×** |
+| `filter → map → slice` (50k) | 13.14 ms | 0.60 ms | **OgerQuery ~22.0×** |
+| `filter → length` (count active) | 13.19 ms | 5.09 ms | **OgerQuery ~2.6×** |
+| `filter → reduce` (sum) | 16.67 ms | 4.70 ms | **OgerQuery ~3.5×** |
+| `filter → map → Set` (dedup) | 13.38 ms | 8.72 ms | **OgerQuery ~1.5×** |
+| `sort → slice` (top 100) | 61.96 ms | 14.55 ms | **OgerQuery ~4.3×** |
+| `Map + map` hash join (500k) | 14.50 ms | 10.20 ms | **OgerQuery ~1.4×** |
 | `find` / `some` (first match) | ~0 ms | ~0 ms | Tie |
-| `sort → slice` (top 100) | 60.95 ms | 131.81 ms | Native (V8 sort) |
-| `Map + map` hash join (500k) | 22.01 ms | 40.72 ms | Native (hand-tuned) |
 
 Numbers vary by CPU/OS — **reproduce locally** with `npm run benchmark`. Full methodology: [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
@@ -82,14 +81,14 @@ Numbers vary by CPU/OS — **reproduce locally** with `npm run benchmark`. Full 
 Native `filter().map().slice()` **allocates two full intermediate arrays** on 1M rows before you ever slice. OgerQuery **fuses** adjacent `Where` + `Select` + `Take` into **one index loop** and **stops early** — no wasted work, no GC pressure.
 
 ```ts
-// Native — 16.74 ms on 1M rows (creates 2 intermediate arrays)
+// Native — 10.64 ms on 1M rows (creates 2 intermediate arrays)
 data
   .filter((r) => r.active)
   .map((r) => r.amount * 2)
   .slice(0, 10_000)
   .reduce((a, b) => a + b, 0);
 
-// OgerQuery — 0.40 ms (single fused pass, early stop)
+// OgerQuery — 0.15 ms (single fused pass, early stop)
 Q(data)
   .Where((r) => r.active)
   .Select((r) => r.amount * 2)
@@ -114,7 +113,7 @@ Published by **[Ogulcan Studio](https://www.npmjs.com/~ogulcanstudio)** — same
 ### CDN (browser, zero build step)
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/ogerquery@0.1.0/dist/OgerQuery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ogerquery@0.2.0/dist/OgerQuery.min.js"></script>
 <script>
   const result = OgerQuery.Q([1, 2, 3, 4, 5])
     .Where((n) => n > 2)
@@ -161,9 +160,9 @@ const errors = await QAsync(logStream)
 
 ## Why Teams Choose OgerQuery
 
-| Requirement | OgerQuery v0.1.0 |
+| Requirement | OgerQuery v0.2.0 |
 |-------------|------------------|
-| **Raw speed on chained pipelines** | Up to **42× faster** than native `Array` methods |
+| **Raw speed on chained pipelines** | Up to **73× faster** than native `Array` methods |
 | **Lazy evaluation** | No intermediate arrays until a terminal runs |
 | **Pipeline fusion** | `Where` / `Select` / `Take` / `Skip` collapse into one pass |
 | **Array fast path** | Index-based loops for `T[]` + fusible ops |

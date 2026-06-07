@@ -37,8 +37,13 @@ export const joinFeature: FeaturePlugin = {
         const key = op.outerKeySelector(outerItem, outerIndex);
         const matches = lookup.get(key);
         if (matches !== undefined) {
-          for (let i = 0; i < matches.length; i++) {
-            yield op.resultSelector(outerItem, matches[i]);
+          if (Array.isArray(matches)) {
+            const mLen = matches.length;
+            for (let i = 0; i < mLen; i++) {
+              yield op.resultSelector(outerItem, matches[i]);
+            }
+          } else {
+            yield op.resultSelector(outerItem, matches);
           }
         }
         outerIndex++;

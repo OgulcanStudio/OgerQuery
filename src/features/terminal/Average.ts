@@ -1,6 +1,6 @@
 import type { FeaturePlugin } from '../../core/FeaturePlugin.js';
 import type { OpPipeline } from '../../core/OpPipeline.js';
-import { executePipeline } from '../../core/executor.js';
+import { executePipeline, executePipelineToAverage } from '../../core/executor.js';
 import { executeAsyncPipeline } from '../../core/asyncExecutor.js';
 import {
   EmptySequenceError,
@@ -22,16 +22,7 @@ export const averageFeature: FeaturePlugin = {
   name: 'Average',
   category: 'terminal',
   runSync(source, pipeline, selector?: Selector<any, number>) {
-    const acc = { sum: 0, compensation: 0 };
-    let count = 0;
-    let index = 0;
-    for (const item of iterate(source, pipeline)) {
-      kahanAdd(acc, selector ? selector(item, index) : (item as number));
-      count++;
-      index++;
-    }
-    if (count === 0) throw new EmptySequenceError();
-    return kahanTotal(acc) / count;
+    return executePipelineToAverage(source, pipeline.ops, selector);
   },
   async runAsync(source, pipeline, selector?: Selector<any, number>) {
     const items = await collectToArray(source, pipeline);

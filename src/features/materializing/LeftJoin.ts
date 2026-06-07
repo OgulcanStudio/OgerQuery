@@ -36,11 +36,16 @@ export const leftJoinFeature: FeaturePlugin = {
       for (const outerItem of source) {
         const key = op.outerKeySelector(outerItem, outerIndex);
         const matches = lookup.get(key);
-        if (matches === undefined || matches.length === 0) {
+        if (matches === undefined) {
           yield op.resultSelector(outerItem, null);
         } else {
-          for (let i = 0; i < matches.length; i++) {
-            yield op.resultSelector(outerItem, matches[i]);
+          if (Array.isArray(matches)) {
+            const mLen = matches.length;
+            for (let i = 0; i < mLen; i++) {
+              yield op.resultSelector(outerItem, matches[i]);
+            }
+          } else {
+            yield op.resultSelector(outerItem, matches);
           }
         }
         outerIndex++;

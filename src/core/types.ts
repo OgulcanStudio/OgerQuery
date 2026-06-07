@@ -21,12 +21,12 @@ export class Grouping<K, T> implements IGrouping<K, T> {
     private readonly elements: T[],
   ) {}
 
-  *[Symbol.iterator](): Iterator<T> {
-    yield* this.elements;
+  [Symbol.iterator](): Iterator<T> {
+    return this.elements[Symbol.iterator]();
   }
 
   toArray(): T[] {
-    return [...this.elements];
+    return this.elements;
   }
 }
 

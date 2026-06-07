@@ -283,6 +283,44 @@ describe('OgerQuery Edge Cases', () => {
       // Admin: Josh (30)
       // User: Dave (25), Amy (25) -> since role is User and age is 25 for both, stability keeps original order (Amy, Dave)
       expect(secondarySorted.map(u => u.name)).toEqual(['Josh', 'Amy', 'Dave']);
+
+      // OrderByDescending with Take (triggers heap optimization)
+      const numbers = [5, 1, 4, 2, 3];
+      expect(Q(numbers).OrderByDescending(x => x).Take(3).ToArray()).toEqual([5, 4, 3]);
+
+      // Compound OrderByDescending and ThenBy with Take
+      const items = [
+        { active: true, amount: 2 },
+        { active: false, amount: 1 },
+        { active: true, amount: 1 },
+        { active: false, amount: 2 }
+      ];
+      const compoundSorted = Q(items)
+        .OrderByDescending(x => x.active)
+        .ThenBy(x => x.amount)
+        .Take(3)
+        .ToArray();
+      expect(compoundSorted).toEqual([
+        { active: true, amount: 1 },
+        { active: true, amount: 2 },
+        { active: false, amount: 1 }
+      ]);
+
+      // Small array heap optimization test cases
+      expect(Q([5]).OrderBy(x => x).Take(1).ToArray()).toEqual([5]);
+      expect(Q([5, 6]).OrderBy(x => x).Take(1).ToArray()).toEqual([5]);
+      expect(Q([5, 6]).OrderBy(x => x).Take(2).ToArray()).toEqual([5, 6]);
+      expect(Q([]).OrderBy(x => x).Take(1).ToArray()).toEqual([]);
+    });
+
+    it('Async OrderBy optimizations (Take, First, Last)', async () => {
+      expect(await QAsync([5]).OrderBy(x => x).Take(1).ToArrayAsync()).toEqual([5]);
+      expect(await QAsync([5, 6]).OrderBy(x => x).Take(1).ToArrayAsync()).toEqual([5]);
+      expect(await QAsync([5, 6]).OrderBy(x => x).Take(2).ToArrayAsync()).toEqual([5, 6]);
+      expect(await QAsync([]).OrderBy(x => x).Take(1).ToArrayAsync()).toEqual([]);
+
+      expect(await QAsync([5, 1, 4]).OrderBy(x => x).FirstAsync()).toEqual(1);
+      expect(await QAsync([5, 1, 4]).OrderBy(x => x).LastAsync()).toEqual(5);
     });
 
     it('Reverse edge cases', () => {
